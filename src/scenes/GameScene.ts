@@ -411,12 +411,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.emitMessage('你走下了台阶...');
+    const nextData: InitData = {
+      floor: this.currentFloor + 1,
+      playerData: this.player.saveData(),
+    };
     this.time.delayedCall(500, () => {
       this.scene.stop('UI');
-      this.scene.restart({
-        floor: this.currentFloor + 1,
-        playerData: this.player.saveData(),
-      });
+      this.scene.start('Game', nextData);
     });
   }
 
