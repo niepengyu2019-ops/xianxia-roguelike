@@ -18,10 +18,20 @@ export interface DungeonData {
 }
 
 /**
- * 生成随机地牢
+ * 生成随机地牢（保证楼梯可达）
  * @param floor 当前层数 (0-based)
  */
 export function generateDungeon(floor: number): DungeonData {
+  // 最多尝试 20 次，确保生成的地牢楼梯可达
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const result = tryGenerateDungeon(floor);
+    if (result) return result;
+  }
+  // 兜底：放宽参数再试
+  return tryGenerateDungeon(floor, true)!;
+}
+
+function tryGenerateDungeon(floor: number, forceConnect = false): DungeonData | null {
   const width = DUNGEON_WIDTH;
   const height = DUNGEON_HEIGHT;
 
@@ -119,6 +129,20 @@ export function generateDungeon(floor: number): DungeonData {
       npcSpawns.push(p);
       markUsed(p);
     }
+  }
+
+  // 验证楼梯从出生点可达
+  const passable = (x: number, y: number) => {
+    const t = tiles[y]?.[x];
+    return t === 0 || t === 2;
+  };
+  const astar = new ROT.Path.AStar(stairsPos.x, stairsPos.y, passable, { topology: 4 });
+  const path: [number, number][] = [];
+  astar.compute(playerStart.x, playerStart.y, (x, y) => path.push([x, y]));
+
+  if (path.length < 2) {
+    // 楼梯不可达，重新生成
+    return null;
   }
 
   return { width, height, tiles, playerStart, stairsPos, enemySpawns, npcSpawns, bossSpawn };
